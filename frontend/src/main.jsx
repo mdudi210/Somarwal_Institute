@@ -28,8 +28,8 @@ import "./styles.css";
 function App() {
   const [route, setRoute] = useState(window.location.hash.replace("#", "") || "/");
   const [home, setHome] = useState(fallbackHome);
-  const [user, setUser] = useState(getStoredUser());
   const [toast, setToast] = useState("");
+  const publicRoutes = ["/", "/courses", "/verify"];
 
   useEffect(() => {
     const fetchHome = () => api("/api/home").then(setHome).catch(() => setHome(fallbackHome));
@@ -44,8 +44,9 @@ function App() {
   }, []);
 
   const navigate = (next) => {
-    window.location.hash = next;
-    setRoute(next);
+    const safeRoute = publicRoutes.includes(next) ? next : "/";
+    window.location.hash = safeRoute;
+    setRoute(safeRoute);
   };
 
   const notify = (message) => {
@@ -53,30 +54,15 @@ function App() {
     window.setTimeout(() => setToast(""), 3500);
   };
 
-  const logout = () => {
-    clearSession();
-    setUser(null);
-    navigate("/");
-  };
-
   const page = useMemo(() => {
-    if (route === "/login") return <Login setUser={setUser} navigate={navigate} notify={notify} />;
-    if (route === "/register") return <Register navigate={navigate} notify={notify} />;
-    if (route === "/admin") return <AdminPortal courses={home.courses} navigate={navigate} notify={notify} />;
-    if (route.startsWith("/admin/student/")) return <AdminStudentProfile navigate={navigate} notify={notify} />;
-    if (route === "/student") return <StudentPortal notify={notify} user={user} />;
     if (route === "/verify") return <VerifyCertificate notify={notify} />;
-    if (route === "/admission") return <Admission courses={home.courses} notify={notify} user={user} navigate={navigate} />;
-    if (route === "/enquiry") return <Enquiry courses={home.courses} notify={notify} />;
-    if (route === "/about") return <About home={home} />;
-    if (route.startsWith("/course/")) return <CourseDetail course={home.courses.find((course) => course.code === route.replace("/course/", ""))} navigate={navigate} />;
-    if (route === "/courses") return <Courses courses={home.courses} navigate={navigate} />;
+    if (route === "/courses") return <Courses courses={home.courses} />;
     return <PublicWebsite home={home} navigate={navigate} />;
-  }, [route, home, user]);
+  }, [route, home]);
 
   return (
     <>
-      <Header navigate={navigate} user={user} logout={logout} />
+      <Header navigate={navigate} />
       <main>{page}</main>
       <Footer />
       {toast && <div className="toast">{toast}</div>}
@@ -84,15 +70,12 @@ function App() {
   );
 }
 
-function Header({ navigate, user, logout }) {
+function Header({ navigate }) {
   const [open, setOpen] = useState(false);
   const links = [
     ["Home", "/"],
-    ["About", "/about"],
     ["Courses", "/courses"],
-    ["Admission", "/admission"],
-    ["Enquiry", "/enquiry"],
-    ["Verification", "/verify"]
+    ["Verify Certificate", "/verify"]
   ];
   return (
     <header className="topbar">
@@ -107,13 +90,7 @@ function Header({ navigate, user, logout }) {
         {links.map(([label, href]) => (
           <button key={href} onClick={() => navigate(href)}>{label}</button>
         ))}
-        {user?.role === "ADMIN" && <button onClick={() => navigate("/admin")}>Admin</button>}
-        {user?.role === "STUDENT" && <button onClick={() => navigate("/student")}>Student</button>}
-        {user ? (
-          <button className="primary small" onClick={logout}><LogOut size={17} /> Logout</button>
-        ) : (
-          <button className="primary small" onClick={() => navigate("/login")}><LogIn size={17} /> Login</button>
-        )}
+        <button className="primary small" onClick={() => navigate("/verify")}><ShieldCheck size={17} /> Verify</button>
       </nav>
     </header>
   );
@@ -127,13 +104,12 @@ function PublicWebsite({ home, navigate }) {
         <div className="hero-copy">
           <p className="eyebrow">Computer and Tech Training in Ajmer</p>
           <h1>Somarwal Computer & Tech Institute</h1>
-          <p>Practical courses, online admission, digital certificates, student portal, and career-focused training for school, college, and job-ready learners.</p>
+          <p>Practical computer courses in Ajmer with a public certificate verification system for students, employers, and institutions.</p>
           <div className="hero-actions">
-            <button className="primary" onClick={() => navigate("/admission")}>Apply Now <ChevronRight size={18} /></button>
+            <button className="primary" onClick={() => navigate("/verify")}>Verify Certificate <ChevronRight size={18} /></button>
+            <button className="secondary" onClick={() => navigate("/courses")}>View Courses</button>
             <a className="secondary" href="https://wa.me/919828272202">WhatsApp Us</a>
             <a className="secondary" href="tel:+919828272202">Call Now</a>
-            <button className="secondary" onClick={() => navigate("/admission")}>Free Demo Class</button>
-            <button className="secondary" onClick={() => navigate("/verify")}>Verify Certificate</button>
           </div>
         </div>
       </section>
@@ -143,7 +119,7 @@ function PublicWebsite({ home, navigate }) {
           <article key={item.title}>
             <Sparkles size={22} />
             <div><strong>{item.title}</strong><span>{item.message}</span></div>
-            <button onClick={() => navigate("/admission")}>{item.action}</button>
+            <button onClick={() => navigate("/courses")}>View Courses</button>
           </article>
         ))}
       </section>
@@ -162,7 +138,7 @@ function PublicWebsite({ home, navigate }) {
           <p className="eyebrow">Popular Programs</p>
           <h2>Courses built for practical outcomes</h2>
         </div>
-        <CourseGrid courses={home.courses.slice(0, 6)} navigate={navigate} />
+        <CourseGrid courses={home.courses.slice(0, 6)} />
       </section>
 
       <section className="split-section">
@@ -268,11 +244,11 @@ function About({ home }) {
   );
 }
 
-function Courses({ courses, navigate }) {
-  return <section className="page section"><div className="section-title"><p className="eyebrow">Course Catalog</p><h1>All active courses</h1></div><CourseGrid courses={courses} navigate={navigate} /></section>;
+function Courses({ courses }) {
+  return <section className="page section"><div className="section-title"><p className="eyebrow">Course Catalog</p><h1>All active courses</h1></div><CourseGrid courses={courses} /></section>;
 }
 
-function CourseGrid({ courses, navigate }) {
+function CourseGrid({ courses }) {
   return (
     <div className="course-grid">
       {courses.map((course) => (
@@ -282,7 +258,6 @@ function CourseGrid({ courses, navigate }) {
           <p>{course.description}</p>
           <div className="chips"><span>{course.duration}</span><span>{course.code}</span></div>
           <ul>{(course.syllabus || []).slice(0, 4).map((item) => <li key={item}><CheckCircle2 size={16} /> {item}</li>)}</ul>
-          {navigate && <div className="course-actions"><button className="secondary" onClick={() => navigate(`/course/${course.code}`)}>Details</button><button className="primary" onClick={() => navigate("/admission")}>Enroll</button></div>}
         </article>
       ))}
     </div>

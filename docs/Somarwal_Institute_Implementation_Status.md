@@ -9,6 +9,16 @@ This document maps the SRS requirements to the current Docker-running applicatio
 - API docs: `http://localhost:8081/api/docs`
 - API health: `http://localhost:8081/api/health`
 
+## Current Staging Release Scope
+
+The `staging` branch currently exposes only the production-critical public pages:
+
+- Home page: `/#/`
+- Courses page: `/#/courses`
+- Certificate verification page: `/#/verify`
+
+Admission, enquiry, about, login, admin, and student portal screens remain in the codebase for future rollout, but they are intentionally hidden from staging navigation while the first production goal is certificate verification.
+
 ## Login
 
 - Admin: `admin@somarwal.edu` / `admin123456`
@@ -18,9 +28,9 @@ This document maps the SRS requirements to the current Docker-running applicatio
 
 | Requirement | Status | Implementation |
 | --- | --- | --- |
-| Full-screen hero | Implemented | Public home page hero with institute positioning and primary CTAs |
-| Admission Open alert | Implemented | Dynamic `announcements` payload from `/api/home` |
-| Scholarship Exam alert | Implemented | Dynamic `announcements` payload from `/api/home` |
+| Full-screen hero | Exposed | Public home page hero with institute positioning and certificate verification CTA |
+| Admission Open alert | Hidden on staging | Backend data exists, but staging keeps public navigation focused |
+| Scholarship Exam alert | Hidden on staging | Backend data exists, but staging keeps public navigation focused |
 | Top Courses | Implemented | Home page course cards loaded from active courses |
 | Why Choose Us | Implemented | Home page feature section |
 | Student metrics | Implemented | `/api/home` stats counters |
@@ -29,14 +39,14 @@ This document maps the SRS requirements to the current Docker-running applicatio
 | Gallery preview | Implemented | Dynamic gallery section |
 | Google Map | Implemented | Embedded map section for Ajmer location |
 | Footer links/contact | Implemented | Footer with phone, email, location, admission status |
-| CTA buttons | Implemented | Apply Now, WhatsApp Us, Call Now, Free Demo Class, Verify Certificate |
-| About intro | Implemented | `/about` page |
-| Mission and Vision | Implemented | `/about` page from `/api/home` about data |
-| Director message/photo | Implemented | `/about` director section |
-| Lab/team/faculty photos | Implemented | `/about` media gallery |
+| CTA buttons | Exposed partially | Verify Certificate, View Courses, WhatsApp Us, Call Now |
+| About intro | Hidden on staging | Code retained for future rollout |
+| Mission and Vision | Hidden on staging | Code retained for future rollout |
+| Director message/photo | Hidden on staging | Code retained for future rollout |
+| Lab/team/faculty photos | Hidden on staging | Code retained for future rollout |
 | Full course list | Implemented | 14 required courses seeded and exposed through `/api/courses` |
-| Course detail pages | Implemented | Hash route `/course/{CODE}` with duration, fees, syllabus, software, certification, career, enroll CTA |
-| Admission form fields | Implemented | Student name, DOB, father, school/college, qualification, WhatsApp number, email, address, course, payment mode |
+| Course detail pages | Hidden on staging | Course list is exposed; detail/enroll pages are future rollout |
+| Admission form fields | Hidden on staging | Backend code retained for future rollout |
 | Registration number | Implemented | Generated as `SCI{year}{sequence}` |
 | PDF receipt | Implemented | Receipt PDF path generated as `/receipts/{receipt_no}.pdf`; provider-grade PDF rendering can replace this path service |
 | Email notification | Implemented | Notification row queued with `send_type=EMAIL` |
@@ -44,7 +54,7 @@ This document maps the SRS requirements to the current Docker-running applicatio
 | Admin course management | Implemented | Create/update/disable course APIs |
 | Admin gallery management | Implemented | Create/delete gallery APIs |
 | Admin review management | Implemented | Create/delete review APIs |
-| Admin admission management | Implemented | Admin dashboard and student/admission list |
+| Admin admission management | Hidden on staging | Backend code retained for future rollout |
 | Responsiveness | Implemented | CSS breakpoints for desktop/tablet/mobile |
 | Docker-only runtime | Implemented | All app services run through Docker Compose |
 
@@ -74,8 +84,4 @@ curl http://localhost:8081/api/health
 curl http://localhost:8081/api/home
 curl http://localhost:8081/api/courses
 curl http://localhost:8081/api/certificate/verify/CERT1001
-curl -X POST http://localhost:8081/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"admin@somarwal.edu","password":"admin123456"}'
 ```
-

@@ -18,7 +18,7 @@ docker compose up --build
 
 Open:
 
-- Website/PWA/Admin/Student app: `http://localhost:8081`
+- Website: `http://localhost:8081`
 - Backend API docs through NGINX: `http://localhost:8081/api/docs`
 - Backend health check: `http://localhost:8081/api/health`
 
@@ -42,12 +42,12 @@ docker compose up --build
 
 Do not run `npm install`, `uvicorn`, or local virtualenv commands on the host machine. All dependencies are installed inside Docker images.
 
-## Core Features
+## Current Staging Website
 
-- Dynamic courses, syllabus, fee, gallery, reviews, placement, blog, and notification data
-- Admission form with generated registration number and receipt number
-- Public certificate verification by certificate number
-- JWT login with admin/student roles
-- Admin dashboard for metrics, admissions, courses, certificates, payments, enquiries, gallery, and results
-- Student dashboard with profile, fees, results, study material, attendance, typing test, and certificate status
-- PWA install metadata and offline shell fallback
+The staging branch is intentionally limited to the pages needed for the first production run:
+
+- Home page
+- Courses page
+- Certificate verification page
+
+The backend/admin/admission/student modules remain in the codebase for later rollout, but they are hidden from the public staging website until they are production-ready.
