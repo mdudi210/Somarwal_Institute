@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: somarwal
+      POSTGRES_USER: somarwal
+      POSTGRES_PASSWORD: somarwal
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U somarwal -d somarwal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+
+  email:
+    image: axllent/mailpit:latest
+    container_name: somarwal-email
+    ports:
+      - "8025:8025"
+    expose:
+      - "1025"
+
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://somarwal:somarwal@postgres:5432/somarwal
+      SECRET_KEY: change-this-in-production
+      ALLOWED_ORIGINS: http://localhost:8081,http://127.0.0.1:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_URL: ""
+    expose:
+      - "5173"
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "8081:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  postgres_data:

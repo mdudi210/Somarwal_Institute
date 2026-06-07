@@ -1,0 +1,2 @@
+"""Somarwal Institute backend package."""
+
