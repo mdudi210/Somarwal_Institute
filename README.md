@@ -49,5 +49,6 @@ The staging branch is intentionally limited to the pages needed for the first pr
 - Home page
 - Courses page
 - Certificate verification page
+- Typing practice page
 
 The backend/admin/admission/student modules remain in the codebase for later rollout, but they are hidden from the public staging website until they are production-ready.

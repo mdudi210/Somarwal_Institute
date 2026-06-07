@@ -16,8 +16,9 @@ The `staging` branch currently exposes only the production-critical public pages
 - Home page: `/#/`
 - Courses page: `/#/courses`
 - Certificate verification page: `/#/verify`
+- Typing practice page: `/#/typing`
 
-Admission, enquiry, about, login, admin, and student portal screens remain in the codebase for future rollout, but they are intentionally hidden from staging navigation while the first production goal is certificate verification.
+Admission, enquiry, about, login, admin, and student portal screens remain in the codebase for future rollout, but they are intentionally hidden from staging navigation while the first production goal is public course browsing, typing practice, and certificate verification.
 
 ## Login
 
@@ -45,6 +46,9 @@ Admission, enquiry, about, login, admin, and student portal screens remain in th
 | Director message/photo | Hidden on staging | Code retained for future rollout |
 | Lab/team/faculty photos | Hidden on staging | Code retained for future rollout |
 | Full course list | Implemented | 14 required courses seeded and exposed through `/api/courses` |
+| Typing practice | Exposed | Public `/typing` page with timed, paragraph, custom, and numbers practice |
+| Typing test metrics | Implemented | Live WPM, raw WPM, CPM, accuracy, errors, progress, time, result summary |
+| Typing result history | Implemented | Browser-local history of last 10 test results with clear action |
 | Course detail pages | Hidden on staging | Course list is exposed; detail/enroll pages are future rollout |
 | Admission form fields | Hidden on staging | Backend code retained for future rollout |
 | Registration number | Implemented | Generated as `SCI{year}{sequence}` |
@@ -85,3 +89,13 @@ curl http://localhost:8081/api/home
 curl http://localhost:8081/api/courses
 curl http://localhost:8081/api/certificate/verify/CERT1001
 ```
+
+## Typing Practice Features
+
+- Timed tests: 1, 2, 3, and 5 minute options
+- Practice modes: timed, paragraph, and custom text
+- Levels: beginner, intermediate, advanced, and numbers
+- Live metrics: WPM, raw WPM, CPM, accuracy, errors, time, and progress
+- Character-level highlighting for correct and incorrect typing
+- Result summary after completion
+- Local best WPM and recent history, saved in the browser

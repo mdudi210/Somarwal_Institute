@@ -16,6 +16,7 @@ import {
   MessageCircle,
   MonitorCheck,
   Phone,
+  RotateCcw,
   Search,
   Send,
   ShieldCheck,
@@ -29,7 +30,7 @@ function App() {
   const [route, setRoute] = useState(window.location.hash.replace("#", "") || "/");
   const [home, setHome] = useState(fallbackHome);
   const [toast, setToast] = useState("");
-  const publicRoutes = ["/", "/courses", "/verify"];
+  const publicRoutes = ["/", "/courses", "/verify", "/typing"];
 
   useEffect(() => {
     const fetchHome = () => api("/api/home").then(setHome).catch(() => setHome(fallbackHome));
@@ -55,6 +56,7 @@ function App() {
   };
 
   const page = useMemo(() => {
+    if (route === "/typing") return <TypingPractice notify={notify} />;
     if (route === "/verify") return <VerifyCertificate notify={notify} />;
     if (route === "/courses") return <Courses courses={home.courses} />;
     return <PublicWebsite home={home} navigate={navigate} />;
@@ -75,6 +77,7 @@ function Header({ navigate }) {
   const links = [
     ["Home", "/"],
     ["Courses", "/courses"],
+    ["Typing Practice", "/typing"],
     ["Verify Certificate", "/verify"]
   ];
   return (
@@ -108,6 +111,7 @@ function PublicWebsite({ home, navigate }) {
           <div className="hero-actions">
             <button className="primary" onClick={() => navigate("/verify")}>Verify Certificate <ChevronRight size={18} /></button>
             <button className="secondary" onClick={() => navigate("/courses")}>View Courses</button>
+            <button className="secondary" onClick={() => navigate("/typing")}>Typing Practice</button>
             <a className="secondary" href="https://wa.me/919828272202">WhatsApp Us</a>
             <a className="secondary" href="tel:+919828272202">Call Now</a>
           </div>
@@ -152,6 +156,15 @@ function PublicWebsite({ home, navigate }) {
           </div>
         </div>
         <img className="side-image" src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80" alt="Students learning computers" />
+      </section>
+
+      <section className="typing-promo">
+        <div>
+          <p className="eyebrow">Typing Skill Builder</p>
+          <h2>Practice speed and accuracy before your certificate exam</h2>
+          <p>Timed tests, paragraph practice, custom text, live WPM, accuracy, errors, and saved local results.</p>
+        </div>
+        <button className="primary" onClick={() => navigate("/typing")}>Start Typing Practice</button>
       </section>
 
       <section className="section">
@@ -282,6 +295,281 @@ function CourseDetail({ course, navigate }) {
       </div>
     </section>
   );
+}
+
+const typingTextBank = {
+  beginner: [
+    "Computer practice builds confidence. Keep your fingers relaxed and type every word with steady attention.",
+    "Digital skills help students complete forms, write letters, manage data, and communicate clearly.",
+    "A good learner practices daily, checks mistakes, and improves speed step by step."
+  ],
+  intermediate: [
+    "Typing accuracy matters more than rushing. When your hands follow rhythm, speed grows naturally and errors reduce.",
+    "Office work often requires email writing, data entry, spreadsheet updates, and quick document preparation.",
+    "Students who practice consistently can prepare better for exams, interviews, and computer operator roles."
+  ],
+  advanced: [
+    "Professional typing requires focus, posture, punctuation control, number-row confidence, and quick correction awareness.",
+    "Technology training connects practical software knowledge with disciplined habits, communication skills, and measurable progress.",
+    "A certificate becomes more valuable when it represents real practice, verified performance, and dependable workplace readiness."
+  ],
+  numbers: [
+    "Invoice 2045 includes 18 items, 3 discounts, GST 18 percent, and final payment of 12980 rupees.",
+    "Batch 2026 starts on 08 June with 45 students, 6 modules, 12 tests, and 90 hours of practice.",
+    "Receipt RCP20260012 shows fee 8500, paid 3000, pending 5500, and transaction number 582914706321."
+  ]
+};
+
+const typingDurations = [60, 120, 180, 300];
+
+function getTypingHistory() {
+  try {
+    return JSON.parse(localStorage.getItem("somarwal_typing_history") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveTypingHistory(history) {
+  localStorage.setItem("somarwal_typing_history", JSON.stringify(history.slice(0, 10)));
+}
+
+function createTypingText(level, mode, customText) {
+  if (mode === "custom" && customText.trim().length >= 20) return customText.trim();
+  const pool = typingTextBank[level] || typingTextBank.beginner;
+  if (mode === "paragraph") return pool.join(" ");
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function calculateTypingStats(input, target, elapsedSeconds) {
+  const typedChars = input.length;
+  let correctChars = 0;
+  let errors = 0;
+  for (let index = 0; index < typedChars; index += 1) {
+    if (input[index] === target[index]) correctChars += 1;
+    else errors += 1;
+  }
+  const minutes = Math.max(elapsedSeconds / 60, 1 / 60);
+  const rawWpm = Math.round((typedChars / 5) / minutes);
+  const wpm = Math.round((correctChars / 5) / minutes);
+  const accuracy = typedChars ? Math.max(0, Math.round((correctChars / typedChars) * 100)) : 100;
+  const cpm = Math.round(correctChars / minutes);
+  return { typedChars, correctChars, errors, rawWpm, wpm, accuracy, cpm };
+}
+
+function TypingPractice({ notify }) {
+  const [mode, setMode] = useState("timed");
+  const [level, setLevel] = useState("beginner");
+  const [duration, setDuration] = useState(60);
+  const [customText, setCustomText] = useState("");
+  const [target, setTarget] = useState(() => createTypingText("beginner", "timed", ""));
+  const [input, setInput] = useState("");
+  const [startedAt, setStartedAt] = useState(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [finished, setFinished] = useState(false);
+  const [history, setHistory] = useState(getTypingHistory);
+
+  const stats = calculateTypingStats(input, target, elapsed);
+  const timeLeft = mode === "timed" ? Math.max(duration - elapsed, 0) : null;
+  const progress = target.length ? Math.min(100, Math.round((input.length / target.length) * 100)) : 0;
+  const best = history.length ? Math.max(...history.map((item) => item.wpm)) : 0;
+
+  useEffect(() => {
+    if (!startedAt || finished) return undefined;
+    const timer = window.setInterval(() => {
+      const nextElapsed = Math.floor((Date.now() - startedAt) / 1000);
+      setElapsed(nextElapsed);
+      if ((mode === "timed" && nextElapsed >= duration) || input.length >= target.length) {
+        setFinished(true);
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [startedAt, finished, duration, mode, input.length, target.length]);
+
+  useEffect(() => {
+    if (!finished || input.length === 0) return;
+    const result = {
+      id: Date.now(),
+      mode,
+      level,
+      duration: mode === "timed" ? duration : elapsed,
+      wpm: stats.wpm,
+      rawWpm: stats.rawWpm,
+      accuracy: stats.accuracy,
+      errors: stats.errors,
+      cpm: stats.cpm,
+      created_at: new Date().toLocaleString()
+    };
+    setHistory((current) => {
+      if (current[0]?.id === result.id) return current;
+      const next = [result, ...current].slice(0, 10);
+      saveTypingHistory(next);
+      return next;
+    });
+  }, [finished]);
+
+  const resetTest = (nextText = target) => {
+    setTarget(nextText);
+    setInput("");
+    setStartedAt(null);
+    setElapsed(0);
+    setFinished(false);
+  };
+
+  const newText = () => resetTest(createTypingText(level, mode, customText));
+
+  const updateMode = (nextMode) => {
+    setMode(nextMode);
+    resetTest(createTypingText(level, nextMode, customText));
+  };
+
+  const updateLevel = (nextLevel) => {
+    setLevel(nextLevel);
+    resetTest(createTypingText(nextLevel, mode, customText));
+  };
+
+  const handleTyping = (event) => {
+    if (finished) return;
+    const value = event.target.value;
+    if (!startedAt && value.length > 0) setStartedAt(Date.now());
+    setInput(value.slice(0, target.length));
+    if (value.length >= target.length) setFinished(true);
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    saveTypingHistory([]);
+    notify("Typing history cleared");
+  };
+
+  return (
+    <section className="page typing-page">
+      <div className="typing-header">
+        <div>
+          <p className="eyebrow">Typing Practice</p>
+          <h1>Speed, accuracy, and exam readiness</h1>
+          <p>Practice English typing with live results and local progress history.</p>
+        </div>
+        <div className="typing-best"><Award size={24} /><span>Best WPM</span><strong>{best}</strong></div>
+      </div>
+
+      <div className="typing-shell">
+        <aside className="typing-controls">
+          <label>Mode</label>
+          <div className="segmented">
+            {["timed", "paragraph", "custom"].map((item) => <button key={item} className={mode === item ? "active" : ""} onClick={() => updateMode(item)}>{item}</button>)}
+          </div>
+
+          <label>Level</label>
+          <select value={level} onChange={(event) => updateLevel(event.target.value)}>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+            <option value="numbers">Numbers</option>
+          </select>
+
+          {mode === "timed" && (
+            <>
+              <label>Duration</label>
+              <div className="duration-grid">
+                {typingDurations.map((seconds) => <button key={seconds} className={duration === seconds ? "active" : ""} onClick={() => { setDuration(seconds); resetTest(); }}>{seconds / 60} min</button>)}
+              </div>
+            </>
+          )}
+
+          {mode === "custom" && (
+            <>
+              <label>Custom text</label>
+              <textarea value={customText} onChange={(event) => setCustomText(event.target.value)} placeholder="Paste at least 20 characters for a custom typing test." />
+              <button className="secondary" onClick={newText}>Use Custom Text</button>
+            </>
+          )}
+
+          <div className="typing-actions">
+            <button className="primary" onClick={newText}><Sparkles size={18} /> New Text</button>
+            <button className="secondary" onClick={() => resetTest()}><RotateCcw size={18} /> Restart</button>
+          </div>
+        </aside>
+
+        <div className="typing-workspace">
+          <div className="typing-stat-grid">
+            <TypingStat label="WPM" value={stats.wpm} />
+            <TypingStat label="Accuracy" value={`${stats.accuracy}%`} />
+            <TypingStat label="Errors" value={stats.errors} />
+            <TypingStat label={mode === "timed" ? "Time Left" : "Time"} value={mode === "timed" ? `${timeLeft}s` : `${elapsed}s`} />
+            <TypingStat label="CPM" value={stats.cpm} />
+            <TypingStat label="Progress" value={`${progress}%`} />
+          </div>
+
+          <div className="typing-progress"><span style={{ width: `${progress}%` }} /></div>
+
+          <div className="typing-text" aria-label="Typing text">
+            {target.split("").map((char, index) => {
+              const typed = input[index];
+              const className = typed == null ? "" : typed === char ? "correct" : "wrong";
+              return <span key={`${char}-${index}`} className={className}>{char === " " ? "\u00a0" : char}</span>;
+            })}
+          </div>
+
+          <textarea
+            className="typing-input"
+            value={input}
+            onChange={handleTyping}
+            disabled={finished}
+            autoFocus
+            placeholder="Start typing here..."
+          />
+
+          {finished && (
+            <div className="result-panel">
+              <ShieldCheck size={30} />
+              <div>
+                <h2>Test Complete</h2>
+                <p>{stats.wpm} WPM, {stats.accuracy}% accuracy, {stats.errors} errors, {stats.rawWpm} raw WPM.</p>
+              </div>
+              <button className="primary" onClick={newText}>Practice Again</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <section className="typing-history">
+        <div className="section-title">
+          <p className="eyebrow">Progress</p>
+          <h2>Recent typing results</h2>
+        </div>
+        <div className="table-panel">
+          <div className="history-toolbar">
+            <strong>{history.length} saved results</strong>
+            <button className="secondary small" onClick={clearHistory}>Clear History</button>
+          </div>
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Date</th><th>Mode</th><th>Level</th><th>WPM</th><th>Accuracy</th><th>Errors</th><th>Time</th></tr></thead>
+              <tbody>
+                {history.length === 0 && <tr><td colSpan="7">No results yet</td></tr>}
+                {history.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.created_at}</td>
+                    <td>{item.mode}</td>
+                    <td>{item.level}</td>
+                    <td>{item.wpm}</td>
+                    <td>{item.accuracy}%</td>
+                    <td>{item.errors}</td>
+                    <td>{item.duration}s</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function TypingStat({ label, value }) {
+  return <div className="typing-stat"><span>{label}</span><strong>{value}</strong></div>;
 }
 
 function Enquiry({ courses, notify }) {
